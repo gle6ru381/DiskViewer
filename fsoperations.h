@@ -2,9 +2,10 @@
 #define FSOPERATIONS_H
 
 #include "DiskViewer_global.h"
-#include <QList>
-#include <QString>
 #include <cinttypes>
+#include <list>
+#include <string>
+#include <vector>
 #include <windows.h>
 
 #include <ntdef.h>
@@ -24,28 +25,31 @@ typedef struct _OBJDIR_INFORMATION {
 
 namespace dv {
 
+using String = std::u16string;
+using StringList = std::vector<String>;
+
 enum class DeviceType {
 };
 
 struct VolumeInfo {
-    QString name;
-    QString link;
+    String name;
+    String link;
     char mountDrive = 0;
     VolumeInfo() = default;
-    VolumeInfo(QString name, QString link, char mountDrive)
+    VolumeInfo(String const& name, String const& link, char mountDrive)
         : name(name)
         , link(link)
         , mountDrive(mountDrive)
     {
     }
-    VolumeInfo(QString name, char mountDrive = '\0')
+    VolumeInfo(String const& name, char mountDrive = '\0')
         : name(name)
         , mountDrive(mountDrive)
     {
     }
 };
 
-using VolumeInfoList = QList<VolumeInfo>;
+using VolumeInfoList = std::vector<VolumeInfo>;
 
 struct DeviceInfo {
     std::string deviceName;
@@ -53,7 +57,7 @@ struct DeviceInfo {
     DeviceType type;
 };
 
-using DeviceInfoList = QList<VolumeInfoList>;
+using DeviceInfoList = std::vector<VolumeInfoList>;
 
 class DISKVIEWER_EXPORT FSOperations final {
 public:
@@ -61,16 +65,18 @@ public:
     static void init();
 
     DeviceInfoList physicalDevices() const;
-    QStringList dirEntryList(QStringList const& filters) const;
-    HANDLE openFile(QString fileName, DWORD dAccess) const;
+    StringList dirEntryList(StringList const& filters) const;
+    HANDLE openFile(String const& fileName, DWORD dAccess) const;
+    HANDLE openFile(wchar_t* fileName, DWORD dAccess) const;
 
 private:
     static FSOperations* m_instance;
     VolumeInfoList getVolumes() const;
-    QString nativeReadLink(QString link) const;
+    String nativeReadLink(String const& link) const;
+    std::list<char> getAvailDrives() const;
 
-    using NtOpenSymbolicLinkObjectT = NTSTATUS (*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PUNICODE_STRING);
-    using NtQuerySumbolicLinkObjectT = NTSTATUS (*)(HANDLE, PUNICODE_STRING, PULONG);
+    using NtOpenSymbolicLinkObjectT = NTSTATUS (*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES);
+    using NtQuerySymbolicLinkObjectT = NTSTATUS (*)(HANDLE, PUNICODE_STRING, PULONG);
     using NtOpenDirectoryObjectT = NTSTATUS (*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES);
     using NtQueryDirectoryObjectT = NTSTATUS (*)(HANDLE, POBJDIR_INFORMATION, ULONG, BOOLEAN, BOOLEAN, PULONG, PULONG);
     using RtlNtStatusToDosErrorT = DWORD (*)(NTSTATUS);
@@ -78,7 +84,7 @@ private:
     using NtOpenFileT = NTSTATUS (*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK, ULONG, ULONG);
 
     NtOpenSymbolicLinkObjectT NtOpenSymbolicLinkObject;
-    NtQuerySumbolicLinkObjectT NtQuerySumbolicLinkObject;
+    NtQuerySymbolicLinkObjectT NtQuerySymbolicLinkObject;
     NtOpenDirectoryObjectT NtOpenDirectoryObject;
     NtQueryDirectoryObjectT NtQueryDirectoryObject;
     RtlNtStatusToDosErrorT RtlNtStatusToDosError;

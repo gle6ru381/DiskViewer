@@ -1,5 +1,4 @@
-CONFIG += qt
-QT += core
+CONFIG -= qt
 
 TEMPLATE = lib
 DEFINES += DISKVIEWER_LIBRARY
