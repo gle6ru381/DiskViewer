@@ -1,4 +1,5 @@
 #include "fsoperations.h"
+#include <iostream>
 #include <windows.h>
 
 #include <fileapi.h>
@@ -53,7 +54,7 @@ std::list<char> FSOperations::getAvailDrives() const
 
     for (int i = 0; i < (int)sizeof(drives); i++) {
         if (drives & (1 << i))
-            result.push_back('a' + 1);
+            result.push_back('a' + i);
     }
     return result;
 }
@@ -79,7 +80,9 @@ FSOperations::getVolumes() const
     while (h != INVALID_HANDLE_VALUE) {
         VolumeInfo volume;
         volume.name = volumeName;
-        volume.link = nativeReadLink(String(u"\\??\\") + (volumeName + 4));
+        String linkName = u"\\??\\";
+        linkName += std::u16string_view(volumeName + 4, volume.name.size() - 5);
+        volume.link = nativeReadLink(linkName);
 
         for (auto drive = drives.begin(); drive != drives.end(); drive++) {
             String driveString = (char16_t)*drive + String(u":\\");
@@ -93,10 +96,11 @@ FSOperations::getVolumes() const
                 }
             }
         }
+        result.emplace_back(volume);
         if (!FindNextVolumeW(h, (wchar_t*)volumeName, std::size(volumeName))) {
+            FindVolumeClose(h);
             h = INVALID_HANDLE_VALUE;
         }
     }
-    FindVolumeClose(h);
     return result;
 }

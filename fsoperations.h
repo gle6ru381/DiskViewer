@@ -61,17 +61,24 @@ using DeviceInfoList = std::vector<VolumeInfoList>;
 
 class DISKVIEWER_EXPORT FSOperations final {
 public:
-    static FSOperations* instance();
-    static void init();
+    static FSOperations* instance()
+    {
+        return m_instance;
+    }
+    static void init()
+    {
+        if (!m_instance)
+            m_instance = new FSOperations;
+    }
 
     DeviceInfoList physicalDevices() const;
     StringList dirEntryList(StringList const& filters) const;
     HANDLE openFile(String const& fileName, DWORD dAccess) const;
     HANDLE openFile(wchar_t* fileName, DWORD dAccess) const;
+    VolumeInfoList getVolumes() const;
 
 private:
     static FSOperations* m_instance;
-    VolumeInfoList getVolumes() const;
     String nativeReadLink(String const& link) const;
     std::list<char> getAvailDrives() const;
 
