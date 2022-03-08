@@ -15,8 +15,10 @@ SOURCES += \
 
 HEADERS += \
     DiskViewer_global.h \
+    disktypes.h \
     diskviewer.h \
-    fsoperations.h
+    fsoperations.h \
+    nativetypes.h
 
 # Default rules for deployment.
 unix {

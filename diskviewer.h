@@ -2,17 +2,11 @@
 #define DISKVIEWER_H
 
 #include "DiskViewer_global.h"
+#include "disktypes.h"
 
 namespace dv {
 
-class DISKVIEWER_EXPORT DiskViewer
-{
-public:
-    DiskViewer();
-
-private:
-
-};
+DISKVIEWER_EXPORT DeviceInfoList physicalDevices();
 
 }
 #endif // DISKVIEWER_H
