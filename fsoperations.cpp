@@ -1,5 +1,6 @@
 #include "fsoperations.h"
 #include <codecvt>
+#include <cwchar>
 #include <iostream>
 #include <windows.h>
 
@@ -25,9 +26,73 @@ FSOperations::FSOperations()
     NtOpenFile = (NtOpenFileT)GetProcAddress(lib, "NtOpenFile");
 }
 
+DeviceInfoList FSOperations::physicalDevices() const
+{
+    auto volumes = getVolumes();
+    auto ntDevices = getNtBlockDevices();
+    DeviceInfoList result;
+
+#ifdef DEVICE_VIEWER_DEBUG_OUTPUT
+    std::wcerr << "Nt devices:\n";
+    for (auto const& device : ntDevices) {
+        std::wcerr << (wchar_t*)device.name.c_str() << L' ' << (wchar_t*)device.link.c_str() << '\n';
+        std::wcerr << "Partitions:\n";
+        for (auto const& part : device.partitions) {
+            std::wcerr << (wchar_t*)part.name.c_str() << L' ' << (wchar_t*)part.link.c_str() << L'\n';
+        }
+        std::wcerr << L'\n';
+    }
+
+    std::wcerr << "Volumes:\n";
+    for (auto const& volume : volumes) {
+        std::wcerr << (wchar_t*)volume.name.c_str() << L' '
+                   << (wchar_t*)volume.link.c_str() << L' '
+                   << (volume.mountDrive == '\0' ? ' ' : volume.mountDrive) << L'\n';
+    }
+#endif
+
+    for (auto& device : ntDevices) {
+        DeviceInfo info;
+        for (auto part = device.partitions.begin(); part != device.partitions.end();) {
+            bool isFind = false;
+            for (auto volume = volumes.begin(); volume != volumes.end();) {
+                if (volume->link == part->link) {
+                    Partition p;
+                    p.link = std::move(volume->link);
+                    p.name = std::move(volume->name);
+                    p.mountDrive = volume->mountDrive;
+                    uint32_t number;
+                    swscanf_s((wchar_t*)part->name.c_str(), L"Partition%u", &number);
+                    p.partitionName = std::move(part->name);
+                    info.partitions.emplace(number, p);
+                    volume = volumes.erase(volume);
+                    part = device.partitions.erase(part);
+                    isFind = true;
+                    break;
+                } else
+                    volume++;
+            }
+            if (!isFind) {
+                Partition p;
+                uint32_t number;
+                swscanf_s((wchar_t*)part->name.c_str(), L"Partition%u", &number);
+                p.link = std::move(part->link);
+                p.mountDrive = '\0';
+                p.partitionName = std::move(part->name);
+                info.partitions.emplace(number, p);
+                part = device.partitions.erase(part);
+            }
+        }
+        info.deviceName = std::move(device.name);
+        result.emplace_back(info);
+    }
+
+    return result;
+}
+
 String FSOperations::formatMessage(DWORD error)
 {
-    String result(1024, 0);
+    String result(256, 0);
     auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, error,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
@@ -50,7 +115,7 @@ String FSOperations::nativeReadLink(const String& link) const
     auto status = NtOpenSymbolicLinkObject(&hObject, 0x0001, &objAttrs);
     if (NT_SUCCESS(status)) {
         uname.Length = 0;
-        char16_t data[1024];
+        char16_t data[256];
         uname.MaximumLength = sizeof(data);
         uname.Buffer = (wchar_t*)data;
 
@@ -122,7 +187,7 @@ StringList FSOperations::dirEntryList(String const& dir, const std::wregex& filt
     if (NT_SUCCESS(status)) {
         ULONG idx = 0;
         while (true) {
-            wchar_t data[1024] = {};
+            wchar_t data[256] = {};
             auto dirInfo = POBJDIR_INFORMATION(data);
             status = NtQueryDirectoryObject(h, dirInfo, std::size(data), true, false, &idx, nullptr);
 
@@ -152,11 +217,9 @@ NtBlockDeviceList FSOperations::getNtBlockDevices() const
             device.name = u"\\Device\\" + file;
             auto partitions = dirEntryList(device.name, std::wregex(L"Partition\\d+"));
             for (auto const& part : partitions) {
-                Partition partition;
+                NtDevicePartition partition;
                 partition.name = part;
                 String fullName = device.name + u'\\' + partition.name;
-                OutputDebugStringW((wchar_t*)fullName.c_str());
-                OutputDebugStringW(L"\n");
                 if (testDevice(fullName)) {
                     partition.link = nativeReadLink(fullName);
                 }
@@ -208,7 +271,7 @@ VolumeInfoList FSOperations::getVolumes() const
 {
     VolumeInfoList result;
     auto drives = getAvailDrives();
-    char16_t volumeName[1024];
+    char16_t volumeName[256];
 
     HANDLE h = FindFirstVolumeW((wchar_t*)volumeName, std::size(volumeName));
     while (h != INVALID_HANDLE_VALUE) {
@@ -220,7 +283,7 @@ VolumeInfoList FSOperations::getVolumes() const
 
         for (auto drive = drives.begin(); drive != drives.end(); drive++) {
             String driveString = (char16_t)*drive + String(u":\\");
-            char16_t buff[1024];
+            char16_t buff[256];
 
             if (GetVolumeNameForVolumeMountPointW((wchar_t*)driveString.c_str(),
                     (wchar_t*)buff, std::size(buff))) {

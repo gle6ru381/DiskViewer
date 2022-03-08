@@ -6,6 +6,7 @@
 #include <list>
 #include <regex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <windows.h>
 
@@ -54,26 +55,35 @@ struct VolumeInfo {
     }
 };
 
-using VolumeInfoList = std::vector<VolumeInfo>;
-
-struct DeviceInfo {
-    std::string deviceName;
-    VolumeInfoList volumes;
-};
-
-using DeviceInfoList = std::vector<VolumeInfoList>;
+using VolumeInfoList = std::list<VolumeInfo>;
 
 struct Partition {
     String name;
     String link;
+    String partitionName;
+    char mountDrive;
 };
 
-using PartitionList = std::vector<Partition>;
+using PartitionList = std::unordered_map<uint32_t, Partition>;
+
+struct DeviceInfo {
+    String deviceName;
+    PartitionList partitions;
+};
+
+using DeviceInfoList = std::vector<DeviceInfo>;
+
+struct NtDevicePartition {
+    String name;
+    String link;
+};
+
+using NtDevicePartitionList = std::list<NtDevicePartition>;
 
 struct NtBlockDevice {
     String name;
     String link;
-    PartitionList partitions;
+    NtDevicePartitionList partitions;
 };
 
 using NtBlockDeviceList = std::vector<NtBlockDevice>;
