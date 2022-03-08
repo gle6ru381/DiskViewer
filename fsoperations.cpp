@@ -22,6 +22,14 @@ FSOperations::FSOperations()
 
 String FSOperations::nativeReadLink(const String& link) const
 {
+#if (_WIN32_WINNT >= 0x0600)
+    auto file = openFile(link, 0);
+    String result;
+    result.resize(1024);
+    auto len = GetFinalPathNameByHandleW(file, (wchar_t*)result.data(), result.size(), FILE_NAME_NORMALIZED);
+    result.resize(len);
+    return result;
+#else
     UNICODE_STRING uname;
     OBJECT_ATTRIBUTES objAttrs;
     HANDLE hObject;
@@ -44,6 +52,7 @@ String FSOperations::nativeReadLink(const String& link) const
     }
     CloseHandle(hObject);
     return String();
+#endif
 }
 
 std::list<char> FSOperations::getAvailDrives() const
@@ -75,7 +84,7 @@ FSOperations::getVolumes() const
     auto drives = getAvailDrives();
     char16_t volumeName[1024];
 
-    auto h = FindFirstVolumeW((wchar_t*)volumeName, std::size(volumeName));
+    HANDLE h = FindFirstVolumeW((wchar_t*)volumeName, std::size(volumeName));
     while (h != INVALID_HANDLE_VALUE) {
         VolumeInfo volume;
         volume.name = volumeName;
