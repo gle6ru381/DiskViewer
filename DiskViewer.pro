@@ -11,14 +11,18 @@ CONFIG += c++17
 
 SOURCES += \
     diskviewer.cpp \
-    fsoperations.cpp
+    fsoperations.cpp \
+    nativefunc.cpp \
+    ntdir.cpp
 
 HEADERS += \
     DiskViewer_global.h \
     disktypes.h \
     diskviewer.h \
     fsoperations.h \
-    nativetypes.h
+    nativefunc.h \
+    nativetypes.h \
+    ntdir.h
 
 # Default rules for deployment.
 unix {

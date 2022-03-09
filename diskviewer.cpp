@@ -6,9 +6,8 @@ using namespace dv;
 DeviceInfoList dv::physicalDevices()
 {
     DeviceInfoList result;
-    auto fs = FSOperations::instance();
-    auto volumes = fs->getVolumes();
-    auto ntDevices = fs->getNtBlockDevices();
+    auto volumes = getVolumes();
+    auto ntDevices = getNtBlockDevices();
 
 #ifdef DEVICE_VIEWER_DEBUG_OUTPUT
     std::wcerr << "Nt devices:\n";
@@ -70,6 +69,7 @@ DeviceInfoList dv::physicalDevices()
             }
         }
         info.name = std::move(device.name);
+        info.type = device.type;
         result.emplace_back(info);
     }
 
