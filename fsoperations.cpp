@@ -92,6 +92,7 @@ static bool testDevice(const String& deviceName)
     auto h = nativeCreateFile(deviceName, GENERIC_READ, err);
 
     if (h != INVALID_HANDLE_VALUE) {
+        closeFile(h);
         result = true;
     } else {
         switch (err) {
@@ -217,6 +218,29 @@ HANDLE dv::openFile(StringView fileName, DWORD dAccess)
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
             nullptr);
+}
+
+void dv::closeFile(HANDLE handle)
+{
+    CloseHandle(handle);
+}
+
+long dv::fileWrite(HANDLE handle, void* data, size_t size)
+{
+    DWORD bytesWriten;
+    bool result = WriteFile(handle, data, size, &bytesWriten, nullptr);
+    if (!result)
+        return -1;
+    return (long)bytesWriten;
+}
+
+long dv::fileRead(HANDLE handle, void* data, size_t size)
+{
+    DWORD bytesRead;
+    bool result = ReadFile(handle, data, size, &bytesRead, nullptr);
+    if (!result)
+        return -1;
+    return (long)bytesRead;
 }
 
 VolumeInfoList dv::getVolumes()
