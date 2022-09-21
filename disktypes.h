@@ -24,11 +24,32 @@ using StringList = std::vector<String>;
 
 enum class DeviceType { Undefined, Harddisk, Floppy, CdRom };
 
+inline String deviceTypeToString(DeviceType type)
+{
+    switch (type) {
+    case DeviceType::Undefined:
+        return u"Undefined";
+    case DeviceType::Harddisk:
+        return u"Harddisk";
+    case DeviceType::Floppy:
+        return u"Floppy";
+    case DeviceType::CdRom:
+        return u"CdRom";
+    }
+}
+
 struct Partition {
     String ntName;
     String link;
     String name;
     char mountDrive = 0;
+    operator String() const
+    {
+        return (ntName.empty() ? u"No nt name" : u"NtName: " + ntName)
+                + (link.empty() ? u"" : u", link by: " + link) + u", name: "
+                + name
+                + (mountDrive ? u", mount on: " + String(1, mountDrive) : u"");
+    }
 };
 using PartitionMap = std::unordered_map<uint32_t, Partition>;
 
@@ -36,6 +57,20 @@ struct DeviceInfo {
     String name;
     DeviceType type = DeviceType::Undefined;
     PartitionMap partitions;
+
+    operator String() const
+    {
+        auto result = u"Name: " + name + u", type: " + deviceTypeToString(type)
+                + u", partitions:\n";
+        for (auto const& part : partitions) {
+            auto p = std::to_string(part.first);
+            result += u"Partition: " + String(p.begin(), p.end()) + u", ";
+            result += part.second;
+            result += u"\n";
+        }
+
+        return result;
+    }
 };
 using DeviceInfoList = std::vector<DeviceInfo>;
 

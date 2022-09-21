@@ -1,11 +1,12 @@
 #ifndef NATIVEFUNC_H
 #define NATIVEFUNC_H
 
+#include "DiskViewer_global.h"
 #include "nativetypes.h"
 
 namespace dv {
 
-class NativeFunc {
+class DISKVIEWER_EXPORT NativeFunc {
 public:
     static NativeFunc const* instance()
     {

@@ -17,10 +17,13 @@ struct DirToken {
 std::vector<DirToken> dirEntryTokenList(
         StringView dir,
         std::list<std::pair<std::wregex, int>> const& tokenDict);
-HANDLE openFile(StringView fileName, DWORD dAccess);
-void closeFile(HANDLE handle);
-long fileWrite(HANDLE file, void* data, size_t size);
-long fileRead(HANDLE file, void* data, size_t size);
+DISKVIEWER_EXPORT HANDLE
+openFile(StringView fileName, DWORD dAccess, DWORD shareAccess = 0);
+DISKVIEWER_EXPORT HANDLE
+nativeCreateFile(StringView fileName, DWORD access, DWORD shareMode);
+DISKVIEWER_EXPORT void closeFile(HANDLE handle);
+DISKVIEWER_EXPORT long fileWrite(HANDLE file, void* data, size_t size);
+DISKVIEWER_EXPORT long fileRead(HANDLE file, void* data, size_t size);
 VolumeInfoList getVolumes();
 NtBlockDeviceList getNtBlockDevices();
 std::list<char> getAvailDrives();

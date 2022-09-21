@@ -203,13 +203,12 @@ std::list<char> dv::getAvailDrives()
     return result;
 }
 
-HANDLE dv::openFile(StringView fileName, DWORD dAccess)
+#include "nativetypes.h"
+#include <iostream>
+
+HANDLE dv::openFile(StringView fileName, DWORD dAccess, DWORD shareAccess)
 {
-    DWORD shareAccess = 0;
-    //    if (dAccess & GENERIC_READ)
-    //        shareAccess |= FILE_SHARE_READ;
-    //    if (dAccess & GENERIC_WRITE)
-    //        shareAccess |= FILE_SHARE_WRITE;
+    std::wcerr << "Open file: " << toWide(fileName);
     return CreateFileW(
             toWide(fileName).data(),
             dAccess,
@@ -218,6 +217,26 @@ HANDLE dv::openFile(StringView fileName, DWORD dAccess)
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
             nullptr);
+}
+
+HANDLE
+dv::nativeCreateFile(StringView fileName, DWORD access, DWORD shareMode)
+{
+    UNICODE_STRING uname;
+    OBJECT_ATTRIBUTES objAttrs;
+    HANDLE result;
+    nt::IO_STATUS_BLOCK status;
+    auto f = dv::NativeFunc::instance();
+
+    f->RtlInitUnicodeString(&uname, (wchar_t*)fileName.data());
+    InitializeObjectAttributes(
+            &objAttrs, &uname, OBJ_CASE_INSENSITIVE, nullptr, nullptr);
+    auto res = f->NtOpenFile(
+            &result, access | SYNCHRONIZE, &objAttrs, &status, 0, 0x00000020);
+
+    if (!NT_SUCCESS(res))
+        result = INVALID_HANDLE_VALUE;
+    return result;
 }
 
 void dv::closeFile(HANDLE handle)
@@ -229,8 +248,21 @@ long dv::fileWrite(HANDLE handle, void* data, size_t size)
 {
     DWORD bytesWriten;
     bool result = WriteFile(handle, data, size, &bytesWriten, nullptr);
-    if (!result)
+    if (!result) {
+        auto err = GetLastError();
+        PSTR error;
+        FormatMessageA(
+                FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
+                        | FORMAT_MESSAGE_IGNORE_INSERTS,
+                nullptr,
+                err,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPSTR)&error,
+                0,
+                nullptr);
+        std::cerr << "Write error: " << error << '\n';
         return -1;
+    }
     return (long)bytesWriten;
 }
 

@@ -1,5 +1,5 @@
 #include "diskviewer.h"
-#include <fsoperations.h>
+#include "fsoperations.h"
 
 using namespace dv;
 
