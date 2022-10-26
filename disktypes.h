@@ -1,6 +1,7 @@
 #ifndef DISKTYPES_H
 #define DISKTYPES_H
 
+#include "DiskViewer_global.h"
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -10,9 +11,14 @@ namespace dv {
 using String = std::u16string;
 using StringView = std::u16string_view;
 
-inline wchar_t* toWide(String& str)
+inline std::wstring_view toWide(String const& str)
 {
-    return (wchar_t*)str.data();
+    return std::wstring_view((wchar_t const*)str.data(), str.size());
+}
+
+inline std::wstring toWide(String&& str)
+{
+    return std::wstring(str.begin(), str.end());
 }
 
 inline std::wstring_view toWide(StringView str)
@@ -53,15 +59,19 @@ struct Partition {
 };
 using PartitionMap = std::unordered_map<uint32_t, Partition>;
 
-struct DeviceInfo {
+struct DISKVIEWER_EXPORT DeviceInfo {
     String name;
     DeviceType type = DeviceType::Undefined;
     PartitionMap partitions;
 
+    uint64_t size() const;
+
     operator String() const
     {
+        auto s = std::to_string(size());
         auto result = u"Name: " + name + u", type: " + deviceTypeToString(type)
-                + u", partitions:\n";
+                + u", size: " + String(s.begin(), s.end())
+                + +u", partitions:\n";
         for (auto const& part : partitions) {
             auto p = std::to_string(part.first);
             result += u"Partition: " + String(p.begin(), p.end()) + u", ";

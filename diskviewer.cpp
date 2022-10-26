@@ -1,5 +1,6 @@
 #include "diskviewer.h"
 #include "fsoperations.h"
+#include <iostream>
 
 using namespace dv;
 
@@ -74,4 +75,21 @@ DeviceInfoList dv::physicalDevices()
     }
 
     return result;
+}
+
+uint64_t DeviceInfo::size() const
+{
+    std::cerr << "Enter function\n";
+    auto name = partitions.at(0).link; // this->name + u"\\Partition3";
+    std::wcerr << "Size file: " << toWide(name) << '\n';
+    auto h = dv::nativeCreateFile(name, 0, 0); // openFile(name, GENERIC_READ);
+    if (h == INVALID_HANDLE_VALUE) {
+        auto err = GetLastError();
+        auto format = formatError(err);
+        std::cerr << "Open error: " << format << '\n';
+        return 0;
+    }
+    auto size = getDiskSize(h);
+    dv::closeFile(h);
+    return size;
 }

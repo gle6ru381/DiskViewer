@@ -14,18 +14,18 @@ using OBJECT_ATTRIBUTES = nt::OBJECT_ATTRIBUTES;
 using UNICODE_STRING = nt::UNICODE_STRING;
 using POBJDIR_INFORMATION = nt::POBJDIR_INFORMATION;
 
-String dv::formatError(DWORD error)
+std::string dv::formatError(DWORD error)
 {
-    String result(256, 0);
-    auto size = FormatMessageW(
+    char data[512];
+    auto size = FormatMessageA(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             nullptr,
             error,
             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            (LPWSTR)result.data(),
-            result.size(),
+            (LPSTR)data,
+            512,
             nullptr);
-    result.resize(size);
+    std::string result(data, data + size);
     return result;
 }
 
@@ -208,7 +208,7 @@ std::list<char> dv::getAvailDrives()
 
 HANDLE dv::openFile(StringView fileName, DWORD dAccess, DWORD shareAccess)
 {
-    std::wcerr << "Open file: " << toWide(fileName);
+    std::wcerr << "Open file: " << toWide(fileName) << '\n';
     return CreateFileW(
             toWide(fileName).data(),
             dAccess,
@@ -311,4 +311,65 @@ VolumeInfoList dv::getVolumes()
         }
     }
     return result;
+}
+
+uint64_t dv::getDiskSize(HANDLE h)
+{
+    char buff[1024];
+    DWORD bytes;
+    auto ret = DeviceIoControl(
+            h,
+            ctlCode(IOCTL_DISK_BASE, 0x28, METHOD_BUFFERED, FILE_ANY_ACCESS),
+            nullptr,
+            0,
+            buff,
+            1024,
+            &bytes,
+            nullptr);
+    PDISK_GEOMETRY_EX geometry;
+    if (ret) {
+        geometry = (PDISK_GEOMETRY_EX)buff;
+        return geometry->DiskSize.QuadPart;
+    }
+    ret = DeviceIoControl(
+            h,
+            ctlCode(IOCTL_DISK_BASE, 0x0, METHOD_BUFFERED, FILE_ANY_ACCESS),
+            nullptr,
+            0,
+            buff,
+            1024,
+            &bytes,
+            nullptr);
+    if (ret) {
+        geometry = (PDISK_GEOMETRY_EX)buff;
+        auto dSize = geometry->Geometry.Cylinders.QuadPart
+                * (geometry->Geometry.TracksPerCylinder)
+                * (geometry->Geometry.SectorsPerTrack)
+                * (geometry->Geometry.BytesPerSector);
+        LARGE_INTEGER size;
+        while (true) {
+            size.QuadPart = dSize;
+            size.LowPart = SetFilePointer(
+                    h, size.LowPart, &size.HighPart, FILE_BEGIN);
+            if (size.LowPart == INVALID_FILE_SIZE) {
+                return 0;
+            }
+            if (ReadFile(h, buff, 1024, &bytes, nullptr)) {
+                if (bytes != 0)
+                    dSize += bytes;
+                else
+                    break;
+            } else {
+                break;
+            }
+        }
+        return dSize;
+    }
+    return 0;
+}
+
+bool dv::umountVolume(HANDLE volume)
+{
+    return DeviceIoControl(
+            volume, FSCTL_DISMOUNT_VOLUME, nullptr, 0, nullptr, 0, nullptr, 0);
 }

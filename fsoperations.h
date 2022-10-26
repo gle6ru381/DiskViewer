@@ -24,10 +24,12 @@ nativeCreateFile(StringView fileName, DWORD access, DWORD shareMode);
 DISKVIEWER_EXPORT void closeFile(HANDLE handle);
 DISKVIEWER_EXPORT long fileWrite(HANDLE file, void* data, size_t size);
 DISKVIEWER_EXPORT long fileRead(HANDLE file, void* data, size_t size);
+DISKVIEWER_EXPORT uint64_t getDiskSize(HANDLE h);
+DISKVIEWER_EXPORT bool umountVolume(HANDLE volume);
 VolumeInfoList getVolumes();
 NtBlockDeviceList getNtBlockDevices();
 std::list<char> getAvailDrives();
-String formatError(DWORD error);
+std::string formatError(DWORD error);
 }
 
 #endif // FSOPERATIONS_H
